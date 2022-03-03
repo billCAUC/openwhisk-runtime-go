@@ -23,7 +23,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/apache/openwhisk-runtime-go/openwhisk"
+	"./openwhisk"
 )
 
 // flag to show version
@@ -47,9 +47,10 @@ func fatalIf(err error) {
 
 func main() {
 	flag.Parse()
-
+	fmt.Printf("start!!!")
 	// show version number
 	if *version {
+		fmt.Printf("entering version!!!")
 		fmt.Printf("OpenWhisk ActionLoop Proxy v%s, built with %s\n", openwhisk.Version, runtime.Version())
 		return
 	}
@@ -57,21 +58,24 @@ func main() {
 	// debugging
 	if *debug {
 		// set debugging flag, propagated to the actions
+		fmt.Printf("debugging!!!!")
 		openwhisk.Debugging = true
 		os.Setenv("OW_DEBUG", "1")
 	}
 
 	// create the action proxy
-	ap := openwhisk.NewActionProxy("./action", os.Getenv("OW_COMPILER"), os.Stdout, os.Stderr)
+	fmt.Printf("creating new proxy!!!!")
+	ap := openwhisk.NewActionProxy("./action", "/home/master/Desktop/openwhisk-runtime-python/core/python3Action/bin/compile", os.Stdout, os.Stderr)
 
 	// compile on the fly upon request
 	if *compile != "" {
+		fmt.Printf("entering compiling!!!")
 		ap.ExtractAndCompileIO(os.Stdin, os.Stdout, *compile, *env)
 		return
 	}
 
 	// start the balls rolling
 	openwhisk.Debug("OpenWhisk ActionLoop Proxy %s: starting", openwhisk.Version)
-	ap.Start(8080)
+	ap.Start(18081)
 
 }
