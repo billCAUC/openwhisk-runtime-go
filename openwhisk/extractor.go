@@ -21,26 +21,17 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strconv"
+//	"strconv"
 )
 
 // higherDir will find the highest numeric name a sub directory has
 // 0 if no numeric dir names found
-func highestDir(dir string) int {
-	files, err := ioutil.ReadDir(dir)
+func highestDir1(dir string, function string) string {
+	_, err := ioutil.ReadDir(dir)
 	if err != nil {
-		return 0
+		return "0"
 	}
-	max := 0
-	for _, file := range files {
-		n, err := strconv.Atoi(file.Name())
-		if err == nil {
-			if n > max {
-				max = n
-			}
-		}
-	}
-	return max
+	return function
 }
 
 // ExtractAction accept a byte array and write it to a file
@@ -51,8 +42,8 @@ func (ap *ActionProxy) ExtractAction(buf *[]byte, suffix string) (string, error)
 	if buf == nil || len(*buf) == 0 {
 		return "", fmt.Errorf("no file")
 	}
-	ap.currentDir++
-	newDir := fmt.Sprintf("%s/%d/%s", ap.baseDir, ap.currentDir, suffix)
+//	ap.currentDir++
+	newDir := fmt.Sprintf("%s/%s/%s", ap.baseDir, ap.currentDir, suffix)
 	os.MkdirAll(newDir, 0755)
 	file := newDir + "/exec"
 	if IsZip(*buf) {

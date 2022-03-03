@@ -51,6 +51,7 @@ func NewExecutor(logout *os.File, logerr *os.File, command string, env map[strin
 	cmd.Stdout = logout
 	cmd.Stderr = logerr
 	cmd.Env = []string{}
+	fmt.Printf("In NewExecutor~~~~~~~~~~~~~~~~~~~~~~~~``")
 	for k, v := range env {
 		cmd.Env = append(cmd.Env, k+"="+v)
 	}
@@ -127,11 +128,16 @@ type ActionAck struct {
 // returns an error if the program fails
 func (proc *Executor) Start(waitForAck bool) error {
 	// start the underlying executable
+	
 	Debug("Start:")
+	fmt.Println(proc.cmd)
 	err := proc.cmd.Start()
 	if err != nil {
+		fmt.Printf("error: %f",err.Error())
+		fmt.Printf("\n\n here is the problem !!!")
 		Debug("run: early exit")
 		proc.cmd = nil // no need to kill
+		fmt.Printf("\n\nin executor.Start~~~~~~!!!!!!!!!!!!!!11")
 		return fmt.Errorf("command exited")
 	}
 	Debug("pid: %d", proc.cmd.Process.Pid)

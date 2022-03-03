@@ -47,20 +47,22 @@ func (ap *ActionProxy) runHandler(w http.ResponseWriter, r *http.Request) {
 
 	// parse the request
 	body, err := ioutil.ReadAll(r.Body)
+	
 	defer r.Body.Close()
 	if err != nil {
 		sendError(w, http.StatusBadRequest, fmt.Sprintf("Error reading request body: %v", err))
 		return
 	}
 	Debug("done reading %d bytes", len(body))
-
+	var request initRequest
+	err = json.Unmarshal(body, &request)
 	// check if you have an action
-	if ap.theExecutor == nil {
+	if ap.ExecutorMapping[request.Value.Name] == nil {
 		sendError(w, http.StatusInternalServerError, fmt.Sprintf("no action defined yet"))
 		return
 	}
 	// check if the process exited
-	if ap.theExecutor.Exited() {
+	if ap.ExecutorMapping[request.Value.Name].Exited() {
 		sendError(w, http.StatusInternalServerError, fmt.Sprintf("command exited"))
 		return
 	}
@@ -69,12 +71,12 @@ func (ap *ActionProxy) runHandler(w http.ResponseWriter, r *http.Request) {
 	body = bytes.Replace(body, []byte("\n"), []byte(""), -1)
 
 	// execute the action
-	response, err := ap.theExecutor.Interact(body)
+	response, err := ap.ExecutorMapping[request.Value.Name].Interact(body)
 
 	// check for early termination
 	if err != nil {
 		Debug("WARNING! Command exited")
-		ap.theExecutor = nil
+		ap.ExecutorMapping[r.URL.Path[5:len(r.URL.Path)]] = nil
 		sendError(w, http.StatusBadRequest, fmt.Sprintf("command exited"))
 		return
 	}

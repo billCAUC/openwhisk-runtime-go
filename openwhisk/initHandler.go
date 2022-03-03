@@ -29,6 +29,7 @@ import (
 )
 
 type initBodyRequest struct {
+	Name   string 		       `json:"name,omitempty"`
 	Code   string                 `json:"code,omitempty"`
 	Binary bool                   `json:"binary,omitempty"`
 	Main   string                 `json:"main,omitempty"`
@@ -51,9 +52,13 @@ func sendOK(w http.ResponseWriter) {
 }
 
 func (ap *ActionProxy) initHandler(w http.ResponseWriter, r *http.Request) {
-
+	
+//	var function_name string= r.URL.Path[6:len(r.URL.Path)-1]
+//	fmt.Println(r.URL.Path[6:len(r.URL.Path)])
 	// you can do multiple initializations when debugging
+	ap.initialized = false
 	if ap.initialized && !Debugging {
+		
 		msg := "Cannot initialize the action more than once."
 		sendError(w, http.StatusForbidden, msg)
 		log.Println(msg)
@@ -62,16 +67,18 @@ func (ap *ActionProxy) initHandler(w http.ResponseWriter, r *http.Request) {
 
 	// read body of the request
 	if ap.compiler != "" {
+		
 		Debug("compiler: " + ap.compiler)
 	}
-
+	
 	body, err := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
+		
 		sendError(w, http.StatusBadRequest, fmt.Sprintf("%v", err))
 		return
 	}
-
+	
 	// decode request parameters
 	if len(body) < 1000 {
 		Debug("init: decoding %s\n", string(body))
@@ -79,7 +86,7 @@ func (ap *ActionProxy) initHandler(w http.ResponseWriter, r *http.Request) {
 
 	var request initRequest
 	err = json.Unmarshal(body, &request)
-
+	fmt.Println("stu~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~:",request.Value.Name)
 	if err != nil {
 		sendError(w, http.StatusBadRequest, fmt.Sprintf("Error unmarshaling request: %v", err))
 		return
@@ -99,7 +106,7 @@ func (ap *ActionProxy) initHandler(w http.ResponseWriter, r *http.Request) {
 	if main == "" {
 		main = "main"
 	}
-
+	
 	// extract code eventually decoding it
 	var buf []byte
 	if request.Value.Binary {
@@ -113,9 +120,12 @@ func (ap *ActionProxy) initHandler(w http.ResponseWriter, r *http.Request) {
 		Debug("it is source code")
 		buf = []byte(request.Value.Code)
 	}
-
+	ap.currentDir = request.Value.Name
 	// if a compiler is defined try to compile
 	_, err = ap.ExtractAndCompile(&buf, main)
+	
+//	fmt.Printf("\n\n", err.Error())
+	
 	if err != nil {
 		if os.Getenv("OW_LOG_INIT_ERROR") == "" {
 			sendError(w, http.StatusBadGateway, err.Error())
@@ -127,10 +137,14 @@ func (ap *ActionProxy) initHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-
+	
 	// start an action
-	err = ap.StartLatestAction()
+	ap.currentDir = request.Value.Name
+	err = ap.StartLatestAction(request.Value.Name)
+	
 	if err != nil {
+		
+		fmt.Printf("\n\nerr.Error():",err.Error())
 		if os.Getenv("OW_LOG_INIT_ERROR") == "" {
 			sendError(w, http.StatusBadGateway, "cannot start action: "+err.Error())
 		} else {
@@ -141,6 +155,7 @@ func (ap *ActionProxy) initHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+//	fmt.Println(r.URL.Path[6:len(r.URL.Path)])
 	ap.initialized = true
 	sendOK(w)
 }
@@ -156,14 +171,14 @@ func (ap *ActionProxy) ExtractAndCompile(buf *[]byte, main string) (string, erro
 	if file == "" {
 		return "", fmt.Errorf("empty filename")
 	}
-
+	
 	// some path surgery
 	dir := filepath.Dir(file)
 	parent := filepath.Dir(dir)
 	srcDir := filepath.Join(parent, "src")
 	binDir := filepath.Join(parent, "bin")
 	binFile := filepath.Join(binDir, "exec")
-
+	fmt.Printf("binFile``````````````````%s",binFile)
 	// if the file is already compiled or there is no compiler just move it from src to bin
 	if ap.compiler == "" || isCompiled(file) {
 		os.Rename(srcDir, binDir)
@@ -172,6 +187,10 @@ func (ap *ActionProxy) ExtractAndCompile(buf *[]byte, main string) (string, erro
 
 	// ok let's try to compile
 	Debug("compiling: %s main: %s", file, main)
+	fmt.Printf("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+	fmt.Println(file)
+	fmt.Printf("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+	
 	os.Mkdir(binDir, 0755)
 	err = ap.CompileAction(main, srcDir, binDir)
 	if err != nil {

@@ -30,6 +30,9 @@ import (
 )
 
 // ActionProxy is the container of the data specific to a server
+
+var mappingPointer = make(map[string]*Executor)
+
 type ActionProxy struct {
 
 	// is it initialized?
@@ -42,8 +45,11 @@ type ActionProxy struct {
 	compiler string
 
 	// index current dir
-	currentDir int
+	currentDir string
 
+	// mapping string->Executor
+	ExecutorMapping map[string]*Executor 
+	
 	// theChannel is the channel communicating with the action
 	theExecutor *Executor
 
@@ -62,7 +68,8 @@ func NewActionProxy(baseDir string, compiler string, outFile *os.File, errFile *
 		false,
 		baseDir,
 		compiler,
-		highestDir(baseDir),
+		highestDir1(baseDir,"init"),
+		make(map[string]*Executor),
 		nil,
 		outFile,
 		errFile,
@@ -110,65 +117,82 @@ func (ap *ActionProxy) SetEnv(env map[string]interface{}) {
 // the more recently uploaded
 // action if valid, otherwise remove it
 // and fallback to the previous, if any
-func (ap *ActionProxy) StartLatestAction() error {
+func (ap *ActionProxy) StartLatestAction(function string) error {
 
 	// find the action if any
-	highestDir := highestDir(ap.baseDir)
-	if highestDir == 0 {
+	highestDir := highestDir1(ap.baseDir,function)
+	if highestDir == "" {
 		Debug("no action found")
 		ap.theExecutor = nil
 		return fmt.Errorf("no valid actions available")
 	}
-
+	
 	// check version
 	execEnv := os.Getenv("OW_EXECUTION_ENV")
+	fmt.Printf("\n\n success get env")
+	//execEnv := "python3"
 	if execEnv != "" {
-		execEnvFile := fmt.Sprintf("%s/%d/bin/exec.env", ap.baseDir, highestDir)
+		fmt.Sprintf("\n\n %s", execEnv)
+		str, _ := os.Getwd()
+		fmt.Printf("%s",str)
+		execEnvFile := fmt.Sprintf("%s/%s/bin/exec.env", ap.baseDir, highestDir)
 		execEnvData, err := ioutil.ReadFile(execEnvFile)
 		if err != nil {
+			fmt.Printf("\n\nLoc 11111111111111111111")
 			return err
 		}
 		if strings.TrimSpace(string(execEnvData)) != execEnv {
+			fmt.Printf("\n\nLoc 2222222222222222222222")
 			fmt.Printf("Expected exec.env should start with %s\nActual value: %s", execEnv, execEnvData)
 			return fmt.Errorf("Execution environment version mismatch. See logs for details.")
 		}
 	}
-
+	
 	// save the current executor
-	curExecutor := ap.theExecutor
+//	curExecutor := ap.theExecutor
 
 	// try to launch the action
-	executable := fmt.Sprintf("%s/%d/bin/exec", ap.baseDir, highestDir)
+	executable := fmt.Sprintf("%s/%s/bin/exec", ap.baseDir, highestDir)
 	os.Chmod(executable, 0755)
 	newExecutor := NewExecutor(ap.outFile, ap.errFile, executable, ap.env)
 	Debug("starting %s", executable)
-
+	ap.ExecutorMapping[highestDir]=newExecutor
 	// start executor
 	err := newExecutor.Start(os.Getenv("OW_WAIT_FOR_ACK") != "")
+	fmt.Println(err)
+	fmt.Printf("\n\n here is the problem StartLatestAction!!!")
 	if err == nil {
 		ap.theExecutor = newExecutor
-		if curExecutor != nil {
-			Debug("stopping old executor")
-			curExecutor.Stop()
-		}
+//		if curExecutor != nil {
+//			Debug("stopping old executor")
+//			curExecutor.Stop()
+//		}
+		fmt.Printf("\n\nLoc 3333333333333333333")
 		return nil
 	}
 
 	// cannot start, removing the action
 	// and leaving the current executor running
 	if !Debugging {
-		exeDir := fmt.Sprintf("./action/%d/", highestDir)
+		exeDir := fmt.Sprintf("./action/%s/", highestDir)
+		fmt.Println(exeDir)
 		Debug("removing the failed action in %s", exeDir)
+		fmt.Printf("removing the dir !!!!!! ./action/%s/", highestDir)
 		os.RemoveAll(exeDir)
 	}
+	fmt.Printf("\n\nLoc 4444444444444444444")
 	return err
 }
 
 func (ap *ActionProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/init":
+//		ap.currentDir = r.URL.Path[6:len(r.URL.Path)]
+		fmt.Printf("\n\nit's case init\n\n")
 		ap.initHandler(w, r)
 	case "/run":
+//		ap.currentDir = r.URL.Path[5:len(r.URL.Path)]
+		fmt.Printf("\n\nit's case run\n\n")
 		ap.runHandler(w, r)
 	}
 }
@@ -176,6 +200,7 @@ func (ap *ActionProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // Start creates a proxy to execute actions
 func (ap *ActionProxy) Start(port int) {
 	// listen and start
+	fmt.Printf("Expected exec.env")
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), ap))
 }
 
@@ -211,3 +236,6 @@ func (ap *ActionProxy) ExtractAndCompileIO(r io.Reader, w io.Writer, main string
 		log.Fatal(err)
 	}
 }
+
+
+
