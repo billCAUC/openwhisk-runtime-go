@@ -23,7 +23,7 @@ import (
 	"os"
 	"runtime"
 
-	"./openwhisk"
+	"../openwhisk"
 )
 
 // flag to show version
