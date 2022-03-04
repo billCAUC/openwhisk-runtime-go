@@ -23,7 +23,7 @@ import (
 	"os"
 	"runtime"
 
-	"../openwhisk"
+	"github.com/billCAUC/multi-func-runtime-proxy/tree/main/openwhisk"
 )
 
 // flag to show version
