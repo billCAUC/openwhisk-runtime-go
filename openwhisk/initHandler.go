@@ -141,7 +141,7 @@ func (ap *ActionProxy) initHandler(w http.ResponseWriter, r *http.Request) {
 	// start an action
 	ap.currentDir = request.Value.Name
 	err = ap.StartLatestAction(request.Value.Name)
-	
+	sendOK(w)
 	if err != nil {
 		
 		fmt.Printf("\n\nerr.Error():",err.Error())
