@@ -65,7 +65,7 @@ func main() {
 
 	// create the action proxy
 	fmt.Printf("creating new proxy!!!!")
-	ap := openwhisk.NewActionProxy("./action", "/home/master/Desktop/openwhisk-runtime-python/core/python3Action/bin/compile", os.Stdout, os.Stderr)
+	ap := openwhisk.NewActionProxy("./action", os.Getenv("OW_COMPILER"), os.Stdout, os.Stderr)
 
 	// compile on the fly upon request
 	if *compile != "" {
