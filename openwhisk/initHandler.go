@@ -123,7 +123,7 @@ func (ap *ActionProxy) initHandler(w http.ResponseWriter, r *http.Request) {
 	ap.currentDir = request.Value.Name
 	// if a compiler is defined try to compile
 	_, err = ap.ExtractAndCompile(&buf, main)
-	
+	sendOK(w)
 //	fmt.Printf("\n\n", err.Error())
 	
 	if err != nil {
@@ -141,7 +141,7 @@ func (ap *ActionProxy) initHandler(w http.ResponseWriter, r *http.Request) {
 	// start an action
 	ap.currentDir = request.Value.Name
 	err = ap.StartLatestAction(request.Value.Name)
-	sendOK(w)
+	
 	if err != nil {
 		
 		fmt.Printf("\n\nerr.Error():",err.Error())
